@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="scaffolded-by" content="https://github.com/google/stagehand" />
+    <title>highlight</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="favicon.ico" />
+    <link
+      rel="stylesheet"
+      href="./styles/darkula.css"
+    />
+    <script src="./js/highlight.pack.js"></script>
+    <script src="./js/jquery-3.4.1.min.js"></script>
+    <!-- <script src="https://cdn.bootcss.com/markdown-it/10.0.0/markdown-it.min.js"></script> -->
+
+  </head>
+
+  <body>
+    <div id="output">
+      <pre>
+        <code class="cpp">
+
+          #include "Activity515party.h"
+          #include "ActivityRegister.h"
+          #include "Common/ErrorDefine.h"
+          #include "Common/ProtoActivity.h"
+          #include "Logic/Role.h"
+          #include "Logic/LogStat.h"
+          #include "Table/TableActivity.h"
+          #include "Activity/ActivityGlobalCountMgr.h"
+          
+          namespace MTTD_Act_515party
+          {
+          int32_t parserConfig515party(uint32_t iActivityId, const Json::Value &jsonComm, const Json::Value &jsonServer, ActCfg515party *pActivityConfig)
+          {
+          
+            (void)jsonServer;
+            if(jsonComm.isMember("part_appointment"))
+            {
+              const Json::Value& jsonPartAppointment = jsonComm["part_appointment"];
+              Act515partyPartAppointment& stAct515partyPartAppointment = pActivityConfig->stPartAppointment;
+              if(jsonPartAppointment.isMember("begin_time"))
+              {
+                stAct515partyPartAppointment.iBeginTime = UtilTime::parseTime(jsonPartAppointment["begin_time"].asString());
+              }
+              if(jsonPartAppointment.isMember("end_time"))
+              {
+                stAct515partyPartAppointment.iEndTime = UtilTime::parseTime(jsonPartAppointment["end_time"].asString());
+              }
+              ActivityDataType::parseIDNumVec(jsonPartAppointment["appoint_reward"],stAct515partyPartAppointment.vAppointReward);
+              ActivityDataType::parseIDNumVec(jsonPartAppointment["share_reward"],stAct515partyPartAppointment.vShareReward);
+          
+              const Json::Value::Members memberGlobalReward = jsonPartAppointment["global_reward"].getMemberNames();
+              for (uint32_t i = 0; i < memberGlobalReward.size(); ++i)
+              {
+                const string& sGlobalReward = memberGlobalReward[i];
+                uint32_t iId = UtilString::strto<uint32_t>(sGlobalReward);
+                Act515partyGlobalReward& stAct515partyGlobalReward = stAct515partyPartAppointment.mGlobalReward[iId];
+                const Json::Value& jsonGlobalReward = jsonPartAppointment["global_reward"][sGlobalReward];
+                stAct515partyGlobalReward.iNum = jsonGlobalReward["num"].asUInt();
+                ActivityDataType::parseIDNumVec(jsonGlobalReward["reward"],stAct515partyGlobalReward.vReward);
+              }
+              ActivityDataType::parseIDNumVec(jsonPartAppointment["eggshell_reward"],stAct515partyPartAppointment.vEggshellReward);
+              if(jsonPartAppointment.isMember("login_begin_time"))
+              {
+                stAct515partyPartAppointment.iLoginBeginTime = UtilTime::parseTime(jsonPartAppointment["login_begin_time"].asString());
+              }
+              if(jsonPartAppointment.isMember("login_end_time"))
+              {
+                stAct515partyPartAppointment.iLoginEndTime = UtilTime::parseTime(jsonPartAppointment["login_end_time"].asString());
+              }
+              ActivityDataType::parseIDNumVec(jsonPartAppointment["appoint_login_reward"],stAct515partyPartAppointment.vAppointLoginReward);
+            }
+          
+              ACT_GLOBAL_COUNT_MGR->initGlobalCount(iActivityId, MTTDProto::EActGlobalCountType_515Party, 10, 20);
+            return 0;
+          }
+          
+          int32_t getStatus515party(Role &role, uint32_t iActivityId, MTTDProto::CmdAct515party_Status &stStatus)
+          {
+              return role.act515party.getStatus(iActivityId, stStatus);
+          }
+          
+          REGISTER_ACTIVITY(MTTD::ActivityType_515party, parserConfig515party, NULL, getStatus515party);
+          }
+          
+          int32_t Activity515party::getStatus(uint32_t iActivityId, MTTDProto::CmdAct515party_Status &stStatus)
+          {
+              const ActCfg515party* pActConfig = getActConfig(iActivityId);
+              if(pActConfig == NULL)
+              {
+                  return MTTD::Error_NoSuch_Activity;
+              }
+              stStatus.iActivityId = iActivityId;
+              stStatus.iGloabalAppointNum = ACT_GLOBAL_COUNT_MGR->getActivityGlobalCount(iActivityId, MTTDProto::EActGlobalCountType_515Party, UtilString::tostr(incrType_Appointment));
+          
+            MTTDCache::CacheAct515party* pActCache = getActCache(iActivityId);
+            if (NULL == pActCache)
+            {
+              return MTTD::Error_NoSuch_Activity;
+            }
+          
+              stStatus.bAppointment = pActCache->bAppointment;
+              stStatus.bTakeLoginReward = pActCache->bTakeLoginReward;
+              stStatus.bTakeShareReward = pActCache->bTakeShareReward;
+              stStatus.mAppointGlobalRewardInfo = pActCache->mAppointGlobalRewardInfo;
+          
+              return 0;
+          }
+          
+          const ActCfg515party* Activity515party::getActConfig(uint32_t iActivityId,bool bCheckConstrain)
+          {
+              const ActivityTableData* pActivityTable = TABLE_ACTIVITY->getActivity(iActivityId);
+              if (NULL == pActivityTable)
+              {
+                  return NULL;
+              }
+              if (pActivityTable->iActivityType != MTTD::ActivityType_515party)
+              {
+                  return NULL;
+              }
+            if(bCheckConstrain)
+            {
+              int32_t iRet = checkActivityConstrain(*pActivityTable);
+              if (iRet != 0)
+              {
+                return NULL;
+              }		
+            }
+          
+              return pActivityTable->getConfig<ActCfg515party>();
+          }
+          
+          MTTDCache::CacheAct515party* Activity515party::getActCache(uint32_t iActivityId,bool bCreate)
+          {
+              MTTDCache::CacheAct515party* pCacheData = findActivity(getCacheActivity().vAct515party, iActivityId);
+              if (pCacheData == NULL)
+              {
+                  if (bCreate) {
+                      const ActCfg515party* pActConfig = getActConfig(iActivityId);
+                      if(pActConfig == NULL)
+                      {
+                          return NULL;
+                      }
+                      
+                      MTTDCache::CacheAct515party stCacheData;
+                      stCacheData.iActivityId = iActivityId;
+                      getCacheActivity().vAct515party.push_back(stCacheData);
+                      return &getCacheActivity().vAct515party.back();
+                  }
+                  return NULL;
+              }
+              else
+              {
+                  return pCacheData;
+              }
+          }
+          
+          
+          int32_t Activity515party::onCmdTakeAppointReward(uint32_t iActivityId, const MTTDProto::Cmd_Act_515party_TakeAppointReward_CS& stReq, MTTDProto::Cmd_Act_515party_TakeAppointReward_SC& stRsp)
+          {
+              (void) stReq;
+              (void) stRsp;
+              const ActCfg515party* pActConfig = getActConfig(iActivityId);
+              CHECK_TABLE_RETURN(pActConfig, iActivityId);
+              MTTDCache::CacheAct515party* pActCache = getActCache(iActivityId);
+              if(NULL == pActCache)
+              {
+                  return MTTD::Error_NoSuch_Activity;
+              }
+              
+          
+              if(!isInPartTime(getNow(),pActConfig->stPartAppointment.iBeginTime ,pActConfig->stPartAppointment.iEndTime))
+              {
+                  return MTTD::Error_NoSuch_Activity;
+              }
+          
+          
+              if(pActCache->bAppointment)
+              {
+                  return MTTD::Error_RewardTaken;
+              }
+              pActCache->bAppointment = true;
+              owner.setChanged();
+              owner.itemMgr.addItemBatch(pActConfig->stPartAppointment.vAppointReward, Action_Act_515party, MTTDProto::eIAR_Activity);
+              
+              ACT_GLOBAL_COUNT_MGR->addActGlobalCount(iActivityId, MTTDProto::EActGlobalCountType_515Party, UtilString::tostr(incrType_Appointment),1);
+              pushActivityStatus(iActivityId);
+              return 0; 
+          }
+          
+          
+          int32_t Activity515party::onCmdTakeAppointLoginReward(uint32_t iActivityId, const MTTDProto::Cmd_Act_515party_TakeAppointLoginReward_CS& stReq, MTTDProto::Cmd_Act_515party_TakeAppointLoginReward_SC& stRsp)
+          {
+              (void) stReq;
+              (void) stRsp;
+              const ActCfg515party* pActConfig = getActConfig(iActivityId);
+              CHECK_TABLE_RETURN(pActConfig, iActivityId);
+              MTTDCache::CacheAct515party* pActCache = getActCache(iActivityId);
+              if(NULL == pActCache)
+              {
+                  return MTTD::Error_NoSuch_Activity;
+              }
+              
+          
+              if(!isInPartTime(getNow(),pActConfig->stPartAppointment.iLoginBeginTime ,pActConfig->stPartAppointment.iLoginEndTime))
+              {
+                  return MTTD::Error_NoSuch_Activity;
+              }
+          
+            if (!pActCache->bAppointment)
+              {
+                  return MTTD::Error_CannotTakeReward;
+              }
+          
+              if(pActCache->bTakeLoginReward)
+              {
+                  return MTTD::Error_RewardTaken;
+              }
+              pActCache->bTakeLoginReward = true;
+              owner.setChanged();
+              owner.itemMgr.addItemBatch(pActConfig->stPartAppointment.vAppointLoginReward, Action_Act_515party, MTTDProto::eIAR_Activity);
+              
+             
+              pushActivityStatus(iActivityId);
+              return 0; 
+          }
+          
+          
+          int32_t Activity515party::onCmdTakeAppointShareReward(uint32_t iActivityId, const MTTDProto::Cmd_Act_515party_TakeAppointShareReward_CS& stReq, MTTDProto::Cmd_Act_515party_TakeAppointShareReward_SC& stRsp)
+          {
+              (void) stReq;
+              (void) stRsp;
+              const ActCfg515party* pActConfig = getActConfig(iActivityId);
+              CHECK_TABLE_RETURN(pActConfig, iActivityId);
+              MTTDCache::CacheAct515party* pActCache = getActCache(iActivityId);
+              if(NULL == pActCache)
+              {
+                  return MTTD::Error_NoSuch_Activity;
+              }
+              
+          
+              if(!isInPartTime(getNow(),pActConfig->stPartAppointment.iBeginTime ,pActConfig->stPartAppointment.iEndTime)
+                  && !isInPartTime(getNow(), pActConfig->stPartAppointment.iLoginBeginTime, pActConfig->stPartAppointment.iLoginEndTime)
+                  )
+              {
+                  return MTTD::Error_NoSuch_Activity;
+              }
+          
+          
+              if(pActCache->bTakeShareReward)
+              {
+                  return MTTD::Error_RewardTaken;
+              }
+              pActCache->bTakeShareReward = true;
+              owner.setChanged();
+              owner.itemMgr.addItemBatch(pActConfig->stPartAppointment.vShareReward, Action_Act_515party, MTTDProto::eIAR_Activity);
+              
+             
+              pushActivityStatus(iActivityId);
+              return 0; 
+          }
+          
+          
+          int32_t Activity515party::onCmdTakeAppointGlobalMapReward(uint32_t iActivityId, const MTTDProto::Cmd_Act_515party_TakeAppointGlobalMapReward_CS& stReq, MTTDProto::Cmd_Act_515party_TakeAppointGlobalMapReward_SC& stRsp)
+          {
+              (void) stReq;
+              (void) stRsp;
+              const ActCfg515party* pActConfig = getActConfig(iActivityId);
+              CHECK_TABLE_RETURN(pActConfig, iActivityId);
+              MTTDCache::CacheAct515party* pActCache = getActCache(iActivityId);
+              if(NULL == pActCache)
+              {
+                  return MTTD::Error_NoSuch_Activity;
+              }
+              
+          
+              if(!isInPartTime(getNow(),pActConfig->stPartAppointment.iBeginTime ,pActConfig->stPartAppointment.iEndTime)
+                  && !isInPartTime(getNow(), pActConfig->stPartAppointment.iLoginBeginTime, pActConfig->stPartAppointment.iLoginEndTime)
+                  )
+              {
+                  return MTTD::Error_NoSuch_Activity;
+              }
+          
+          
+              const Act515partyGlobalReward * pReward = UtilSTL::findMapPtr(pActConfig->stPartAppointment.mGlobalReward, stReq.iRewardIndex);
+              if (NULL == pReward)
+              {
+                  return MTTD::Error_NoSuch_Activity;
+              }
+                  
+              if (pActCache->mAppointGlobalRewardInfo[stReq.iRewardIndex])
+              {
+                  return MTTD::Error_RewardTaken;
+              }
+          
+              if (ACT_GLOBAL_COUNT_MGR->getActivityGlobalCount(iActivityId, MTTDProto::EActGlobalCountType_515Party, UtilString::tostr(incrType_Appointment)) < pReward->iNum)
+              {
+                  return MTTD::Error_CannotTakeReward;
+              }
+          
+              pActCache->mAppointGlobalRewardInfo[stReq.iRewardIndex] = true;
+              owner.setChanged();
+              owner.itemMgr.addItemBatch(pReward->vReward, Action_Act_515party, MTTDProto::eIAR_Activity);
+             
+              pushActivityStatus(iActivityId);
+              return 0; 
+          }
+          
+          //@@cmdHandleFunc@@//别删，代码生成点
+          
+          
+        </code>
+      </pre>
+
+      <pre>
+        <code class="html">
+          &lt;div>
+            &lt;p>Hello, World!&lt;/p>
+          &lt;/div>
+        </code>
+      </pre>
+
+      <div class="code html">
+        &lt;div>
+          &nbsp;&nbsp;&lt;p>Hello, World!&lt;/p>
+        &lt;/div>
+      </div>
+    </div>
+
+    <pre>
+      <code class="javascript from-worker">
+        // From Web Worker
+        $(document).ready(function() {
+          $('pre code').each(function(i, block) {
+            hljs.highlightBlock(block);
+          });
+        });
+      </code>
+    </pre>
+    <script type="text/javascript">
+       $(document).ready(function() {
+          $('pre code').each(function(i, block) {
+            hljs.highlightBlock(block);
+          });
+        });
+    </script>
+  </body>
+</html>

@@ -48,6 +48,7 @@ class MLApp extends StatelessWidget {
   }
 
   TextTheme _buildRallyTextTheme(TextTheme base) {
+    
     return base
         .copyWith(
           body1: base.body1.copyWith(

@@ -1,6 +1,6 @@
-import 'package:fab_circular_menu/fab_circular_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:mt_flutter/base/js_helper.dart';
 import 'package:mt_flutter/wigets/flutter_syntax_view.dart';
 
 class CodeData {
@@ -199,7 +199,11 @@ class _GenActivityPageState extends State<GenActivityPage>
           label: '复制到剪切板',
           labelBackgroundColor: Theme.of(context).primaryColor,
           labelStyle: TextStyle(fontSize: 18.0),
-          onTap: () => print('SECOND CHILD'),
+          onTap: () {
+
+
+            
+          },
         ),
         SpeedDialChild(
           child: Icon(Icons.file_download),
@@ -207,7 +211,12 @@ class _GenActivityPageState extends State<GenActivityPage>
           label: '导出当前文件',
           labelBackgroundColor: Theme.of(context).primaryColor,
           labelStyle: TextStyle(fontSize: 18.0),
-          onTap: () => print('THIRD CHILD'),
+          onTap: () {
+
+            JsHelper.excuteRemoteJs();
+
+
+          },
         ),
       ],
     );
