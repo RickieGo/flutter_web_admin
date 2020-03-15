@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:js' as js;
 
+import 'package:mt_flutter/views/gen_activity_code/activity_config_parser.dart';
 
 class JsHelper {
   static var jscontent = r'''
@@ -33749,44 +33751,30 @@ var activityTaskGroupConfig = {
     scope.drawRewardConfig = activityDrawRewardConfig;
     scope.options = options;
 
-    console.log(123456);
 });
 
 
 
   ''';
 
-  static _convertJsObjectToMap(Object thing) {
-
-    if (thing is js.JsArray) {
-      List res = new List();
-      js.JsArray a = thing;
-      a.forEach((otherthing) {
-        res.add(_convertJsObjectToMap(otherthing));
-      });
-      return res;
-    } else if(thing is js.JsObject) {    
-      Map res = new Map();
-      js.JsObject o = thing ;
-      Iterable<String> k = js.context['Object'].callMethod('keys', [o]);
-      k.forEach((String k) {
-        res[k] = _convertJsObjectToMap(o[k]);
-      });
-      return res;
-    }
-    else {
-  return thing;
- }
-  }
-
   static void excuteRemoteJs() {
     js.context['client_setting'] = js.JsObject(js.context['Object']);
     js.context.callMethod("eval", [jscontent]);
+    var jsonActivity =
+        js.context['JSON'].callMethod('stringify', [js.context['activity']]);
 
-    Iterable<dynamic> k = js.context['Object'].callMethod('keys', [js.context['activity']]);
-    k.forEach((dynamic v) {
-        print(v);
-      });
+    Map<String, dynamic> activity = jsonDecode(jsonActivity);
+    Map<String, dynamic> a = activity['config']['activityTypeDefine']["244"];
+
+    ActConfigParser.reset();
+    ActConfigParser.mActivityValue = activity['config'];
+    ActConfigParser.sActName = a["ename"];
+    ActConfigParser parser = ActConfigParser();
+    parser.parse(a["fieldOption"], "comm_param");
+    parser.parse(a["fieldOption"], "server_param");
+    parser.printTypeDefine();
+    // parser.printHeadFile();
+    print(ActConfigParser.headOut);
   }
   //获取枚举类型中最大的协议id
 
